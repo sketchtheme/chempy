@@ -1,0 +1,25 @@
+""
+DATA to fill the database
+
+
+name, +
+atomic_num, +
+atomic_symbol, +
+atomic_mass, +
+valence, +
+electron_conf, 
+isotopes, 
+per_table_group, +
+per_table_period, +
+metallicity, 
+chem_react, 
+ionization_energy, 
+electronegativity, +
+melt_point, +
+boil_point, +
+density, +
+oxidation_states, +
+radioactive_prop, 
+natural_abundance +
+
+"""

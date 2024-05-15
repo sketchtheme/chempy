@@ -1,0 +1,9 @@
+Moles, Masses, and Formula Units
+
+
+(NaH4)2Cr2O7(s)→Cr2O3(s)+Na2(g)+4H2O(g)
+
+Two NH4+ ions and one Cr2O72− ion yield 1 formula unit of Cr2O3, 1 N2 molecule, and 4 H2O molecules.
+One mole of (NH4)2Cr2O7 yields 1 mol of Cr2O3, 1 mol of N2, and 4 mol of H2O.
+A mass of 252 g of (NH4)2Cr2O7 yields 152 g of Cr2O3, 28 g of N2, and 72 g of H2O.
+A total of 6.022 × 1023 formula units of (NH4)2Cr2O7 yields 6.022 × 1023 formula units of Cr2O3, 6.022 × 1023 molecules of N2, and 24.09 × 1023 molecules of H2O.

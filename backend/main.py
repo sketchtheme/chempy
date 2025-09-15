@@ -1,38 +1,42 @@
 from backend.reactions import single_replacement as SR
+from backend.core import parser, charges, utils
 import re
 
 tests = [
-#    ("Zn", "CuSO4"),
-#    ("Fe", "CuSO4"),
-#    ("Ag", "HCl"),
-#    ("Cl2", "2 NaBr"),  # raw string; splitter will see '2NaBr' as formula - balancing handles numeric prefixes
-    ("Ca", "H2O"),
-#    ("Zn", "HCl"),
-    
-    # --- metal displaces metal ---
-    ("Mg", "FeCl2"),       # should work
-#    ("Pb", "ZnSO4"),       # no reaction
-    ("Al", "Cu(NO3)2"),    # should work
+    # --- Metal displaces metal ---
+    ("Zn", "CuSO4"),       # classic: Zn more reactive than Cu
+    ("Fe", "CuSO4"),       # Fe above Cu
+    ("Ag", "CuSO4"),       # Ag below Cu → no reaction
+    ("Mg", "FeCl2"),       # Mg above Fe
+    ("Pb", "ZnSO4"),       # Pb below Zn → no reaction
+    ("Ca", "Cu(OH)2"),     # Ca above Cu → hydroxide displacement
 
-    # --- metal displaces water ---
-#    ("K", "H2O"),          # should work
-#    ("Fe", "H2O"),         # no reaction (cold water)
+    # --- Metal displaces hydrogen from acid ---
+    ("Zn", "HCl"),         # Zn above H
+    ("Mg", "H2SO4"),       # Mg above H
+    ("Zn", "H3PO4"),       # polyatomic acid case
+    ("Cu", "HCl"),         # Cu below H → no reaction
+    ("Hg", "HCl"),         # Hg below H → no reaction
 
-    # --- metal displaces hydrogen (acids) ---
-    ("Mg", "H2SO4"),       # should work
-#    ("Cu", "H2SO4"),       # no reaction
+    # --- Metal displaces hydrogen from water ---
+    ("K", "H2O"),          # group 1 alkali → reacts
+    ("Ca", "H2O"),         # group 2 alkaline earth → reacts
+    ("Fe", "H2O"),         # Fe does not react with cold water
+    ("Mg", "H2O"),         # Mg does not react with cold water
 
-    # --- halogen displacement ---
-#    ("Br2", "KI"),         # should work
-#    ("I2", "NaCl"),        # no reaction
-#    ("Cl2", "NaF"),        # no reaction
+    # --- Halogen replacement ---
+    ("Cl2", "NaBr"),       # Cl more reactive than Br
+    ("Br2", "KI"),         # Br more reactive than I
+    ("I2", "NaCl"),        # I less reactive than Cl → no reaction
+    ("Cl2", "NaF"),        # Cl less reactive than F → no reaction
 
-    # --- polyatomic / tricky ---
-    ("Zn", "H3PO4"),       # Zn3(PO4)2 + H2
-    ("Ca", "Cu(OH)2"),     # Ca(OH)2 + Cu
-    ("Ni", "Pb(NO3)2"),    # Ni(NO3)2 + Pb
-#    ("Hg", "HCl"),         # no reaction
+    # --- Edge / tricky cases ---
+    ("H2", "CuSO4"),       # free H2 molecule → not handled as displacer
+    ("Na", "NaCl"),        # same element with salt → no net reaction
+    ("Al", "Cu(NO3)2"),    # polyatomic nitrate with transition metal
+    ("Ni", "Pb(NO3)2"),    # Ni vs Pb, nitrate salt
 ]
+
 
 
 def normalize_compound_input(raw: str):
@@ -45,8 +49,8 @@ def normalize_compound_input(raw: str):
     return r
 
 for a, b in tests:
-    b_norm = normalize_compound_input(b)
-    out = SR.predict_single_replacement(a, b_norm)
+    #b_norm = normalize_compound_input(b)
+    out = SR.predict_single_replacement(a, b) #b_norm
     print("====")
     print(f"Reactants: {a} + {b}")
     if not out["possible"]:

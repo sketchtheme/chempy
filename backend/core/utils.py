@@ -22,7 +22,7 @@ def formula_from_ions(cation: str, c_charge: int, anion: str, a_charge: int):
     def fmt_part(sym, count, is_poly):
         if count == 1:
             return sym
-        return f"({sym}){count}" if not sym.endswith(')') else f"{sym}{count}"
+        return f"({sym}){count}" if is_poly else f"{sym}{count}"
         
     # decide whether anion symbol corresponds to a polyatomic (presence in POLYATOMIC keys)
     is_cation_poly = cation in charges.POLYATOMIC

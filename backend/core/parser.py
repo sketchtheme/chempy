@@ -116,80 +116,100 @@ def detect_polyatomic_in_formula(raw: str):
             return True, key, comp, charge, name, 'internal'
     return False, None, None, None, None, None
 
+#needs refinement
+def dict_to_formula(counts: dict) -> str:
+    """
+    Convert element-count dict into a conventional chemical formula.
+    - Detects polyatomic groups (SO4, NO3, OH, etc.)
+    - Handles acids (H first) and salts (metal first)
+    - Falls back to Hill system ordering if unknown
+    """
+    # First, check if the dict exactly matches a known polyatomic
+    for ion, (comp, charge, name) in charges.POLYATOMIC.items():
+        if comp == counts:
+            return ion
 
-'''
+    parts = []
+
+    # Acid convention: if H present and nonmetal anion exists, put H first
+    if "H" in counts and len(counts) > 1:
+        hcount = counts["H"]
+        parts.append("H" + (str(hcount) if hcount > 1 else ""))
+        # remove so we don’t reuse
+        counts = {el:cnt for el,cnt in counts.items() if el != "H"}
+
+    # Next: if a metal is present, put it first
+    metals = [el for el in counts if el in rules.ACTIVITY_SERIES]
+    if metals:
+        for m in metals:
+            c = counts[m]
+            parts.append(m + (str(c) if c > 1 else ""))
+        counts = {el:cnt for el,cnt in counts.items() if el not in metals}
+
+    # Remaining elements/polyatomics → alphabetical
+    for el in sorted(counts.keys()):
+        cnt = counts[el]
+        parts.append(el + (str(cnt) if cnt > 1 else ""))
+
+    return "".join(parts)
+
+def clean_ion(sym: str) -> str:
+    """
+    Normalize ion string:
+    - Remove outer parentheses and trailing multipliers, e.g. (NO3)2 -> NO3
+    - Remove simple trailing digits that represent count, e.g. Cl2 -> Cl
+    - Keep digits that are part of polyatomic identity (NO3, SO4, PO4, etc.)
+    """
+    # (X)2 -> X
+    m = re.match(r'^\((.+)\)\d+$', sym)
+    if m:
+        return m.group(1)
+    # If matches known polyatomic exactly, keep it
+    if sym in charges.POLYATOMIC:
+        return sym
+    # Otherwise strip trailing digits (like Cl2 -> Cl)
+    return re.sub(r'\d+$', '', sym)
+
+    
 def split_cation_anion(compound_raw: str):
-    """
-    Heuristic split of an ionic formula into (cation_str, anion_str).
-    Works for common formulas like: NaCl, CuSO4, NH4Cl, Ca(OH)2 (parentheses handled in parse).
-    """
-    raw = compound_raw.replace(" ", "")
-    # Handle acids (H at start but not H2O)
-    if raw.startswith("H") and raw != "H2O":
-        # acid -> cation is H (implicit); anion is remainder
-        return "H", raw[1:]
-    # detect polyatomic ions
-    found, key, comp, charge, name, pos = detect_polyatomic_in_formula(raw)
-    if found:
-        if pos in ('suffix', 'internal'):
-            # assume cation is what's before the matched suffix
-            prefix = raw[:raw.rfind(key)]
-            if prefix == "":  # compound begins with polyatomic? get prefix fallback
-                # e.g., "NH4Cl" handled below by prefix detection, but here suffix/location might be internal
-                pass
-            else:
-                return prefix, key
-        if pos == 'prefix':
-            # polyatomic cation
-            suffix = raw[len(key):]
-            return key, suffix
-    # fallback: try match element symbol as prefix (common for metal salts)
-    for sym in ELEMENT_SYMBOLS:
-        if raw.startswith(sym):
-            rest = raw[len(sym):]
-            if rest == "":
-                # it's a pure element (not a compound)
-                return sym, ""
-            return sym, rest
-    # last resort: attempt to split in the middle (very fragile)
-    mid = len(raw)//2
-    return raw[:mid], raw[mid:]
-'''
+    ordered, counts = parse_formula(compound_raw)
 
-def match_polyatomic(sub_dict):
-    """Try to identify sub_dict as n × some polyatomic.
-       Returns (ion_symbol, multiplier) or (None, 1)."""
+    # pure element case
+    if len(ordered) == 1:
+        return ordered[0][0], ""
+
+    # acid rule: H at start
+    if ordered[0][0] == "H" and compound_raw != "H2O":
+        return "H", match_polyatomic_or_fallback(ordered[1:])
+
+    # default: first = cation, rest = anion
+    cation = ordered[0][0]
+    anion = match_polyatomic_or_fallback(ordered[1:])
+    return clean_ion(cation), clean_ion(anion)
+
+
+def match_polyatomic_or_fallback(anion_parts):
+    # build dict from the part
+    sub_dict = {}
+    for sym, cnt in anion_parts:
+        sub_dict[sym] = sub_dict.get(sym, 0) + cnt
+
+    # try match known polyatomics
     for ion, (comp, charge, _) in charges.POLYATOMIC.items():
         factor = None
-        ok = True
-        for el, cnt in comp.items():
+        valid = True
+        for el, c in comp.items():
             if el not in sub_dict:
-                ok = False
+                valid = False
                 break
-            # all ratios must be equal
-            ratio = sub_dict[el] // cnt
+            ratio = sub_dict[el] // c
             if factor is None:
                 factor = ratio
             elif factor != ratio:
-                ok = False
+                valid = False
                 break
-        if ok and factor and all(sub_dict[e] == comp[e]*factor for e in comp):
-            return ion, factor
-    return None, 1
+        if valid and factor and all(sub_dict[e] == comp[e]*factor for e in comp):
+            return ion  # return canonical symbol like SO4
 
-def split_cation_anion(compound_raw: str):
-    ordered, counts = parse_formula(compound_raw)
-    if len(ordered) == 1:
-        return ordered[0][0], ""
-    cation = ordered[0][0]
-
-    # Build dict for rest (anion part)
-    anion_dict = {}
-    for sym, cnt in ordered[1:]:
-        anion_dict[sym] = anion_dict.get(sym,0)+cnt
-
-    ion, mult = match_polyatomic(anion_dict)
-    if ion:
-        return cation, ion  # you can also return (ion, mult) if you want multiplier
-    # fallback to raw string
-    return cation, "".join(f"{sym}{cnt if cnt>1 else ''}" for sym,cnt in ordered[1:])
+    # fallback: rebuild string
+    return "".join(f"{sym}{cnt if cnt > 1 else ''}" for sym, cnt in anion_parts)

@@ -11,6 +11,7 @@
 
 
 from backend.core import balancer, charges, parser, rules, utils
+import re
 
 
 def is_halogen(symbol: str):
@@ -137,12 +138,16 @@ def predict_single_replacement(reactant_raw: str, compound_raw: str):
     elif subtype == "metal_displaces_hydrogen":
         # metal + acid -> salt + H2
         cation = el_symbol
+        '''
         # get conjugate base (anion) of the acid: remove leading H and parse remainder
         acid = compound_raw
         anion_part = acid[1:]
         if anion_part == "":  # e.g., "H" only
             return {"possible": False, "reason": f"Acid '{acid}' malformed or unsupported."}
         anion = anion_part
+        '''
+        # strip all leading H with optional digit
+        anion = re.sub(r"^H\d*", "", compound_raw)
         try:
             c_charge = charges.infer_cation_charge(cation)
             a_charge = charges.infer_anion_charge(anion)

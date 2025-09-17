@@ -5,4 +5,4 @@ A project being developed to reduce the time spend to learning and understanding
 
 ### PRODUCT GENERATION
 
-The main purpose of this project is to provide a tool that would produce products based on reactants, for now it cannot complete, however the can for now correct the reaction.
+The main purpose of this project is to provide a tool that would produce products based on reactants, for now it solves the single-replacement reactions types
